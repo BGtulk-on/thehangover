@@ -106,6 +106,9 @@ const EventDashboard = ({ initialData, onSave, onBack, eventId, publicMode }) =>
                         <div style={{ background: '#0d1117', padding: '15px', borderRadius: '6px', border: '1px solid #30363d' }}>
                             <div style={{ fontSize: '12px', color: '#8b949e', marginBottom: '5px', fontWeight: 600 }}>MONEY</div>
                             <div style={{ fontSize: '24px', fontWeight: 600 }}>€{data.baseAmount}</div>
+                            <div style={{ fontSize: '11px', color: '#8b949e', marginBottom: '5px' }}>
+                                (Total: €{(data.baseAmount * data.people.length).toFixed(0)})
+                            </div>
                             <div style={{ fontSize: '13px', color: '#8b949e' }}>
                                 Base / person <br />
                                 <span style={{ color: '#f85149' }}>+€{totalExpenses} extras</span>
@@ -226,7 +229,33 @@ const EventDashboard = ({ initialData, onSave, onBack, eventId, publicMode }) =>
                     </div>
                 )
             case 'people':
-                return <PeopleList list={data.people} setList={(v) => updateData('people', v)} />
+                return <PeopleList list={data.people} setList={(newList) => {
+                    if (newList.length < data.people.length) {
+                        const removedIds = data.people.filter(p => !newList.find(n => n.id === p.id)).map(p => p.id)
+
+                        setData(prev => {
+                            let next = { ...prev, people: newList }
+
+                            removedIds.forEach(id => {
+                                next.paidList = next.paidList.filter(pid => pid !== id)
+
+                                next.rooms = next.rooms.map(r => ({
+                                    ...r,
+                                    occupants: r.occupants.filter(oid => oid !== id)
+                                }))
+
+                                next.cars = next.cars.map(c => ({
+                                    ...c,
+                                    passengers: c.passengers.filter(pid => pid !== id),
+                                    driver: c.driver === id ? null : c.driver
+                                }))
+                            })
+                            return next
+                        })
+                    } else {
+                        updateData('people', newList)
+                    }
+                }} />
             case 'money':
                 return <Money
                     expenses={data.expenses}
@@ -247,7 +276,9 @@ const EventDashboard = ({ initialData, onSave, onBack, eventId, publicMode }) =>
     }
 
     return (
-        <div style={{ paddingBottom: publicMode ? '20px' : '80px', textAlign: 'center' }}>
+        <div style={{ paddingBottom: publicMode ? '40px' : '100px', textAlign: 'center' }}>
+
+
 
 
             {!publicMode && (
@@ -277,6 +308,11 @@ const EventDashboard = ({ initialData, onSave, onBack, eventId, publicMode }) =>
                 </div>
 
                 {renderContent()}
+            </div>
+
+            {/* Watermark */}
+            <div style={{ fontSize: '10px', color: '#30363d', marginTop: '20px', marginBottom: '10px' }}>
+                Made by <a href="https://bgtulk.dev" target="_blank" rel="noreferrer" style={{ color: '#30363d', textDecoration: 'none', fontWeight: 'bold' }}>BGtulk</a>
             </div>
 
             {!publicMode && (

@@ -39,18 +39,45 @@ const Money = ({ expenses, setExpenses, people, baseAmount, setBaseAmount, paidL
                     padding: '16px',
                     borderBottom: '1px solid #30363d',
                 }}>
-                    <label style={{ display: 'block', fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>
-                        Base Cost per Person
-                    </label>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <span style={{ fontSize: '16px', color: '#8b949e' }}>€</span>
-                        <input
-                            type="number"
-                            value={baseAmount}
-                            onChange={e => setBaseAmount(e.target.value)}
-                            placeholder="0"
-                            style={{ width: '100%' }}
-                        />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+
+                        <div>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px', color: '#8b949e' }}>
+                                Per Person
+                            </label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{ fontSize: '16px', color: '#8b949e' }}>€</span>
+                                <input
+                                    type="number"
+                                    value={baseAmount || ""}
+                                    onChange={e => setBaseAmount(parseFloat(e.target.value) || 0)}
+                                    placeholder="0"
+                                    style={{ width: '100%' }}
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '5px', color: '#8b949e' }}>
+                                Total Event ({people.length})
+                            </label>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span style={{ fontSize: '16px', color: '#8b949e' }}>€</span>
+                                <input
+                                    type="number"
+                                    value={(baseAmount * people.length).toFixed(2) || ""}
+                                    onChange={e => {
+                                        const total = parseFloat(e.target.value) || 0
+                                        const perPerson = people.length > 0 ? total / people.length : 0
+                                        setBaseAmount(parseFloat(perPerson.toFixed(2)))
+                                    }}
+                                    placeholder="Total"
+                                    style={{ width: '100%' }}
+                                    disabled={people.length === 0}
+                                />
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
