@@ -1,4 +1,5 @@
-const sqlite3 = require('sqlite3').verbose();
+require('dotenv').config();
+const mysql = require('mysql2');
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
@@ -7,24 +8,59 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-const db = new sqlite3.Database('./hangover.db');
-
-db.serialize(() => {
-    db.run("CREATE TABLE IF NOT EXISTS users (id INTEGER PRIMARY KEY, username TEXT)");
-    db.run("CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, user_id INTEGER, name TEXT, data TEXT)");
+const pool = mysql.createPool({
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'root',
+    password: process.env.DB_PASSWORD || '',
+    database: process.env.DB_NAME || 'thehangover',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
 });
+
+
+const initDb = () => {
+    const userTable = `
+        CREATE TABLE IF NOT EXISTS users (
+            id INT AUTO_INCREMENT PRIMARY KEY, 
+            username VARCHAR(255)
+        )
+    `;
+    const eventTable = `
+        CREATE TABLE IF NOT EXISTS events (
+            id INT AUTO_INCREMENT PRIMARY KEY, 
+            user_id INT, 
+            name VARCHAR(255), 
+            data LONGTEXT
+        )
+    `;
+
+    pool.query(userTable, (err) => {
+        if (err) console.error("Error creating users table:", err);
+        else console.log("Users table ready");
+    });
+
+    pool.query(eventTable, (err) => {
+        if (err) console.error("Error creating events table:", err);
+        else console.log("Events table ready");
+    });
+};
+
+initDb();
 
 app.post('/login', (req, res) => {
     const { username } = req.body;
     if (!username) return res.status(400).json({ error: 'Username required' });
 
-    db.get("SELECT id, username FROM users WHERE username = ?", [username], (err, row) => {
-        if (row) {
-            res.json(row);
+    pool.query("SELECT id, username FROM users WHERE username = ?", [username], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        if (rows.length > 0) {
+            res.json(rows[0]);
         } else {
-            db.run("INSERT INTO users (username) VALUES (?)", [username], function (err) {
+            pool.query("INSERT INTO users (username) VALUES (?)", [username], (err, result) => {
                 if (err) return res.status(500).json({ error: err.message });
-                res.json({ id: this.lastID, username });
+                res.json({ id: result.insertId, username });
             });
         }
     });
@@ -34,48 +70,49 @@ app.get('/events', (req, res) => {
     const userId = req.query.userId;
     if (!userId) return res.status(400).json({ error: 'User ID required' });
 
-    db.all("SELECT id, name, data FROM events WHERE user_id = ?", [userId], (err, rows) => {
+    pool.query("SELECT id, name, data FROM events WHERE user_id = ?", [userId], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         const events = rows.map(r => ({
             id: r.id,
             name: r.name,
-            data: JSON.parse(r.data)
+            data: typeof r.data === 'string' ? JSON.parse(r.data) : r.data
         }));
         res.json(events);
     });
 });
 
 app.get('/event/:id', (req, res) => {
-    db.get("SELECT id, name, data FROM events WHERE id = ?", [req.params.id], (err, row) => {
+    pool.query("SELECT id, name, data FROM events WHERE id = ?", [req.params.id], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        if (!row) return res.status(404).json({ error: 'Event not found' });
+        if (rows.length === 0) return res.status(404).json({ error: 'Event not found' });
 
+        const row = rows[0];
         res.json({
             id: row.id,
             name: row.name,
-            data: JSON.parse(row.data)
+            data: typeof row.data === 'string' ? JSON.parse(row.data) : row.data
         });
     });
 });
 
 app.post('/events', (req, res) => {
     const { userId, name, data } = req.body;
-    db.run("INSERT INTO events (user_id, name, data) VALUES (?, ?, ?)", [userId, name, JSON.stringify(data)], function (err) {
+    pool.query("INSERT INTO events (user_id, name, data) VALUES (?, ?, ?)", [userId, name, JSON.stringify(data)], (err, result) => {
         if (err) return res.status(500).json({ error: err.message });
-        res.json({ id: this.lastID });
+        res.json({ id: result.insertId });
     });
 });
 
 app.put('/events/:id', (req, res) => {
     const { name, data } = req.body;
-    db.run("UPDATE events SET name = ?, data = ? WHERE id = ?", [name, JSON.stringify(data), req.params.id], function (err) {
+    pool.query("UPDATE events SET name = ?, data = ? WHERE id = ?", [name, JSON.stringify(data), req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
 });
 
 app.delete('/events/:id', (req, res) => {
-    db.run("DELETE FROM events WHERE id = ?", [req.params.id], function (err) {
+    pool.query("DELETE FROM events WHERE id = ?", [req.params.id], (err) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ success: true });
     });
