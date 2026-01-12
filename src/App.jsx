@@ -45,7 +45,12 @@ function App() {
     fetch(`${API_URL}/events?userId=${userId}`)
       .then(res => res.json())
       .then(data => {
-        setEvents(data)
+        if (Array.isArray(data)) {
+          setEvents(data)
+        } else {
+          console.error("Expected array but got:", data)
+          setEvents([])
+        }
         setView('list')
       })
       .catch(err => {

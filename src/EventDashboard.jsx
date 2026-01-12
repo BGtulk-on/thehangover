@@ -69,12 +69,11 @@ const EventDashboard = ({ initialData, onSave, onBack, eventId, publicMode }) =>
 
 
     const updateData = (field, val) => {
-        if (publicMode) return // Read only
+        if (publicMode) return
         setData(prev => ({ ...prev, [field]: val }))
     }
 
     const renderContent = () => {
-        // Force dash view if public
         const currentTab = publicMode ? 'dash' : activeTab
 
         if (currentTab === 'dash') {
@@ -289,9 +288,9 @@ const EventDashboard = ({ initialData, onSave, onBack, eventId, publicMode }) =>
                     background: '#161b22',
                     borderTop: '1px solid #30363d',
                     display: 'flex',
-                    justifyContent: 'space-evenly', // Changed from center to space-evenly
-                    gap: '5px', // Reduced gap for mobile
-                    padding: '10px 5px' // Reduced padding
+                    justifyContent: 'center',
+                    gap: '15px',
+                    padding: '10px'
                 }}>
 
                     {tabs.map((t, i) => {
