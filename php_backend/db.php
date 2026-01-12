@@ -25,12 +25,16 @@ function loadEnv($path) {
     }
 }
 
-loadEnv(__DIR__ . '/../.env');
+loadEnv(dirname(__DIR__) . '/.env');
 
-$host = getenv('DB_HOST') ?: 'localhost';
-$user = getenv('DB_USER') ?: 'root';
-$pass = getenv('DB_PASSWORD') ?: '';
-$dbname = getenv('DB_NAME') ?: 'thehangover';
+$host = $_ENV['DB_HOST'] ?? $_SERVER['DB_HOST'] ?? getenv('DB_HOST');
+$user = $_ENV['DB_USER'] ?? $_SERVER['DB_USER'] ?? getenv('DB_USER');
+$pass = $_ENV['DB_PASSWORD'] ?? $_SERVER['DB_PASSWORD'] ?? getenv('DB_PASSWORD');
+$dbname = $_ENV['DB_NAME'] ?? $_SERVER['DB_NAME'] ?? getenv('DB_NAME');
+
+if (!$host || !$user) {
+    die(json_encode(["error" => "Database configuration missing in .env"]));
+}
 
 $conn = new mysqli($host, $user, $pass, $dbname);
 
