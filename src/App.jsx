@@ -3,7 +3,7 @@ import Login from './Login'
 import EventList from './EventList'
 import EventDashboard from './EventDashboard'
 
-const API_URL = import.meta.env.DEV ? 'http://localhost:3001' : ''
+const API_URL = import.meta.env.DEV ? 'http://localhost:3001' : '/api'
 
 function App() {
   const [view, setView] = useState(() => {
