@@ -1,16 +1,19 @@
-# React + Vite
+# Hostinger Guide
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Since Hostinger Shared Hosting only supports PHP (not Node.js), we use a swapped backend for production.
 
-Currently, two official plugins are available:
+## 1. Environment Setup
+- Go to **Hostinger File Manager**.
+- Upload your `.env` file to the root `public_html` folder.
+- Ensure it contains your database credentials (`DB_HOST`, `DB_USER`, etc.).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 2. Backend Setup (`/api`)
+1. Create a **New Folder** named `api` inside `public_html`.
+2. Open the `public_html/api/` folder.
+3. Upload the files from the local `php_backend/` folder:
+   - `index.php`
+   - `db.php`
+   - `.htaccess`
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+**Note:** The `.htaccess` in the `api` folder handles the API routing, while the one in `public_html` handles the React app routing.
+You will hoave to do this every time you push to the repository. Sorry, but that's the only way to make it work.
