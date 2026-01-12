@@ -3,14 +3,11 @@ $conn = require_once 'db.php';
 
 header("Content-Type: application/json");
 
-// Get the request URI/path relative to the API root
-// This removes '/api' if it exists in the path, or just gets the path after script name
 $requestUri = $_SERVER['REQUEST_URI'];
 $scriptName = $_SERVER['SCRIPT_NAME'];
 $path = str_replace(dirname($scriptName), '', $requestUri);
-$path = strtok($path, '?'); // Remove query string
+$path = strtok($path, '?');
 
-// Simple Router
 $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true);
 

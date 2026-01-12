@@ -10,7 +10,7 @@ Since Hostinger Shared Hosting only supports PHP (not Node.js), we use a swapped
 ## 2. Backend Setup (`/api`)
 1. Create a **New Folder** named `api` inside `public_html`.
 2. Open the `public_html/api/` folder.
-3. Upload the files from the local `php_backend/` folder:
+3. Upload the files from the local `api/` folder:
    - `index.php`
    - `db.php`
    - `.htaccess`
