@@ -8,6 +8,13 @@ A comprehensive event planning and expense splitting application designed for gr
 - **Event Dashboard**: Manage dates, locations, and participant lists.
 - **Shareable Links**: easy access for all participants.
 
+## Built With
+- **Frontend**: React + Vite
+- **Styling**: Vanilla CSS
+- **Backend**: Native PHP (Production) / Node.js (Dev)
+- **Database**: MySQL (Hostinger)
+- **Deployment**: Hostinger Shared Hosting
+
 ---
 
 # Hostinger Guide
