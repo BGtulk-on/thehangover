@@ -1,3 +1,15 @@
+# The Hangover
+
+A comprehensive event planning and expense splitting application designed for group trips.
+
+## Features
+- **Expense Tracking**: Easily split bills and track who paid what.
+- **Logistics Manager**: Organize carpooling and room assignments.
+- **Event Dashboard**: Manage dates, locations, and participant lists.
+- **Shareable Links**: easy access for all participants.
+
+---
+
 # Hostinger Guide
 
 Since Hostinger Shared Hosting only supports PHP (not Node.js), we use a swapped backend for production.
