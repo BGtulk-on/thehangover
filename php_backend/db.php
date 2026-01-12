@@ -7,25 +7,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 function loadEnv($path) {
     if (!file_exists($path)) {
         return;
     }
     $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($lines as $line) {
-        if (strpos(trim($line), '#') === 0) continue;
-        list($name, $value) = explode('=', $line, 2);
-        $name = trim($name);
-        $value = trim($value);
+        $line = trim($line);
+        if ($line === '' || strpos($line, '#') === 0) continue;
+        
+        $parts = explode('=', $line, 2);
+        if (count($parts) !== 2) continue;
+        
+        $name = trim($parts[0]);
+        $value = trim($parts[1]);
+        
         if (!array_key_exists($name, $_SERVER) && !array_key_exists($name, $_ENV)) {
-            putenv(sprintf('%s=%s', $name, $value));
+            if (function_exists('putenv')) {
+                putenv(sprintf('%s=%s', $name, $value));
+            }
             $_ENV[$name] = $value;
             $_SERVER[$name] = $value;
         }
     }
 }
 
-loadEnv(dirname(__DIR__) . '/.env');
+$envPath = dirname(__DIR__) . '/.env';
+if (!file_exists($envPath)) {
+    die(json_encode(["error" => ".env file not found at: " . $envPath]));
+}
+loadEnv($envPath);
 
 $host = $_ENV['DB_HOST'] ?? $_SERVER['DB_HOST'] ?? getenv('DB_HOST');
 $user = $_ENV['DB_USER'] ?? $_SERVER['DB_USER'] ?? getenv('DB_USER');
