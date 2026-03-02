@@ -2,11 +2,17 @@ import { useState } from 'react'
 
 const Login = ({ onLogin }) => {
     const [user, setUser] = useState("")
+    const [password, setPassword] = useState("")
+    const [errorMsg, setErrorMsg] = useState(null)
 
     const handleSubmit = (e) => {
         e.preventDefault()
-        if (!user.trim()) return
-        onLogin(user)
+        if (!user.trim() || !password.trim()) {
+            setErrorMsg("Username and password required")
+            return
+        }
+        setErrorMsg(null)
+        onLogin(user, password, setErrorMsg)
     }
 
     return (
@@ -22,9 +28,13 @@ const Login = ({ onLogin }) => {
                     />
                     <input
                         type="password"
+                        value={password}
+                        onChange={e => setPassword(e.target.value)}
                         placeholder="Password"
                         style={{ width: '100%', marginBottom: '15px' }}
                     />
+                    
+                    {errorMsg && <div style={{ color: '#ff7b72', marginBottom: '15px', fontSize: '14px' }}>{errorMsg}</div>}
 
                     <button type="submit" style={{ width: '100%', background: '#238636', color: '#fff', border: '1px solid rgba(240,246,252,0.1)' }}>
                         Enter

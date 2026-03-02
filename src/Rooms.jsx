@@ -8,7 +8,7 @@ const Rooms = ({ rooms, setRooms, people }) => {
     const add_room = () => {
         if (!rname) return
         setRooms([...rooms, {
-            id: Math.random(),
+            id: crypto.randomUUID(),
             name: rname,
             capacity: parseInt(cap),
             occupants: []
@@ -73,9 +73,22 @@ const Rooms = ({ rooms, setRooms, people }) => {
                             alignItems: 'center'
                         }}>
                             <span style={{ fontWeight: 600, fontSize: '14px' }}>{r.name}</span>
-                            <span style={{ fontSize: '12px', background: r.occupants.length >= r.capacity ? '#f85149' : '#30363d', color: '#f0f6fc', padding: '2px 8px', borderRadius: '10px' }}>
-                                {r.occupants.length} / {r.capacity}
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <span style={{ fontSize: '12px', background: r.occupants.length >= r.capacity ? '#f85149' : '#30363d', color: '#f0f6fc', padding: '2px 8px', borderRadius: '10px' }}>
+                                    {r.occupants.length} / {r.capacity}
+                                </span>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (window.confirm("Are you sure you want to delete this room?")) {
+                                            setRooms(rooms.filter(room => room.id !== r.id));
+                                        }
+                                    }}
+                                    style={{ background: 'transparent', border: 'none', color: '#f85149', cursor: 'pointer', padding: '0' }}
+                                >
+                                    Delete
+                                </button>
+                            </div>
                         </div>
 
                         <div style={{ background: '#0d1117' }}>

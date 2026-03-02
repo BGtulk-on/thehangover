@@ -1,7 +1,7 @@
 <?php
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-header("Access-Control-Allow-Headers: Content-Type");
+header("Access-Control-Allow-Headers: Content-Type, user-id");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
@@ -59,8 +59,12 @@ if ($conn->connect_error) {
 
 $userTable = "CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY, 
-    username VARCHAR(255)
+    username VARCHAR(255),
+    password VARCHAR(255)
 )";
+
+$conn->query($userTable);
+$conn->query("ALTER TABLE users ADD COLUMN password VARCHAR(255)");
 
 $eventTable = "CREATE TABLE IF NOT EXISTS events (
     id INT AUTO_INCREMENT PRIMARY KEY, 

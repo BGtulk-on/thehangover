@@ -58,17 +58,24 @@ function App() {
       })
   }
 
-  const handleLogin = (username) => {
+  const handleLogin = (username, password, setErrorMsg) => {
     fetch(`${API_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username })
+      body: JSON.stringify({ username, password })
     })
-      .then(res => res.json())
+      .then(async res => {
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error || 'Failed to login')
+        return data
+      })
       .then(u => {
         setUser(u)
         localStorage.setItem('hangover_user', JSON.stringify(u))
         fetchEvents(u.id)
+      })
+      .catch(err => {
+        if (setErrorMsg) setErrorMsg(err.message)
       })
   }
 
@@ -110,20 +117,22 @@ function App() {
   }
 
   const handleDeleteEvent = (id) => {
+    if (!user) return
     fetch(`${API_URL}/events/${id}`, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: { 'user-id': user.id.toString() }
     })
       .then(() => fetchEvents(user.id))
   }
 
   const handleSaveEvent = (data) => {
-    if (!currentEvent) return
+    if (!currentEvent || !user) return
 
     setCurrentEvent({ ...currentEvent, data, name: data.name })
 
     fetch(`${API_URL}/events/${currentEvent.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'user-id': user.id.toString() },
       body: JSON.stringify({ name: data.name, data })
     })
   }

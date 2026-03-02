@@ -35,7 +35,12 @@ const EventList = ({ events, onSelect, onDelete, onCreate, username, onLogout })
                         </button>
 
                         <button
-                            onClick={(e) => { e.stopPropagation(); onDelete(ev.id); }}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (window.confirm("Are you sure you want to delete this event? This action cannot be undone.")) {
+                                    onDelete(ev.id);
+                                }
+                            }}
                             style={{ background: 'transparent', border: 'none', color: '#f85149' }}
                         >
                             <Trash2 size={16} />

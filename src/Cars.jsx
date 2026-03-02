@@ -8,7 +8,7 @@ const Cars = ({ cars, setCars, people }) => {
     const add_car = () => {
         if (!driver) return
         setCars([...cars, {
-            id: Math.random(),
+            id: crypto.randomUUID(),
             driver: driver,
             capacity: parseInt(cap),
             passengers: []
@@ -73,9 +73,22 @@ const Cars = ({ cars, setCars, people }) => {
                                 alignItems: 'center'
                             }}>
                                 <strong style={{ fontSize: '14px' }}>🚗 {dr_name}'s Car</strong>
-                                <span style={{ fontSize: '12px', background: c.passengers.length >= c.capacity ? '#f85149' : '#30363d', color: '#f0f6fc', padding: '2px 8px', borderRadius: '10px' }}>
-                                    {c.passengers.length} / {c.capacity}
-                                </span>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <span style={{ fontSize: '12px', background: c.passengers.length >= c.capacity ? '#f85149' : '#30363d', color: '#f0f6fc', padding: '2px 8px', borderRadius: '10px' }}>
+                                        {c.passengers.length} / {c.capacity}
+                                    </span>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (window.confirm("Are you sure you want to delete this car?")) {
+                                                setCars(cars.filter(car => car.id !== c.id));
+                                            }
+                                        }}
+                                        style={{ background: 'transparent', border: 'none', color: '#f85149', cursor: 'pointer', padding: '0' }}
+                                    >
+                                        Delete
+                                    </button>
+                                </div>
                             </div>
 
                             <div style={{ background: '#0d1117' }}>

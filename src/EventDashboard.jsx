@@ -249,6 +249,7 @@ const EventDashboard = ({ initialData, onSave, onBack, eventId, publicMode }) =>
                                     passengers: c.passengers.filter(pid => pid !== id),
                                     driver: c.driver === id ? null : c.driver
                                 }))
+                                next.expenses = next.expenses.filter(ex => ex.payer !== id)
                             })
                             return next
                         })

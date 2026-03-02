@@ -6,7 +6,7 @@ const PeopleList = ({ list, setList }) => {
 
     const add_p = () => {
         if (!temp) return
-        setList([...list, { name: temp, id: Math.random() }])
+        setList([...list, { name: temp, id: crypto.randomUUID() }])
         setTemp("")
     }
 

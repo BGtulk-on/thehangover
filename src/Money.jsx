@@ -5,11 +5,12 @@ const Money = ({ expenses, setExpenses, people, baseAmount, setBaseAmount, paidL
     const [amt, setAmt] = useState("")
     const [desc, setDesc] = useState("")
     const [payer, setPayer] = useState("")
+    const [localTotal, setLocalTotal] = useState("")
 
     const add_ex = () => {
         if (!amt || !payer) return
         setExpenses([...expenses, {
-            id: Math.random(),
+            id: crypto.randomUUID(),
             amount: parseFloat(amt),
             desc: desc || "Stuff",
             payer: payer
@@ -50,7 +51,10 @@ const Money = ({ expenses, setExpenses, people, baseAmount, setBaseAmount, paidL
                                 <input
                                     type="number"
                                     value={baseAmount || ""}
-                                    onChange={e => setBaseAmount(parseFloat(e.target.value) || 0)}
+                                    onChange={e => {
+                                        setBaseAmount(parseFloat(e.target.value) || 0)
+                                        setLocalTotal("")
+                                    }}
                                     placeholder="0"
                                     style={{ width: '100%' }}
                                 />
@@ -65,12 +69,15 @@ const Money = ({ expenses, setExpenses, people, baseAmount, setBaseAmount, paidL
                                 <span style={{ fontSize: '16px', color: '#8b949e' }}>€</span>
                                 <input
                                     type="number"
-                                    value={(baseAmount * people.length).toFixed(2) || ""}
+                                    value={localTotal !== "" ? localTotal : (baseAmount * people.length > 0 ? (baseAmount * people.length).toFixed(2) : "")}
                                     onChange={e => {
-                                        const total = parseFloat(e.target.value) || 0
-                                        const perPerson = people.length > 0 ? total / people.length : 0
-                                        setBaseAmount(parseFloat(perPerson.toFixed(2)))
+                                        const val = e.target.value;
+                                        setLocalTotal(val);
+                                        const total = parseFloat(val) || 0;
+                                        const perPerson = people.length > 0 ? total / people.length : 0;
+                                        setBaseAmount(parseFloat(perPerson.toFixed(2)));
                                     }}
+                                    onBlur={() => setLocalTotal("")}
                                     placeholder="Total"
                                     style={{ width: '100%' }}
                                     disabled={people.length === 0}

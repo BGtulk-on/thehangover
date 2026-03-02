@@ -12,23 +12,35 @@ $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true);
 
 if ($method === 'POST' && preg_match('#^/login$#', $path)) {
-    $username = $input['username'] ?? '';
-    if (!$username) {
+    $rawPassword = $input['password'] ?? '';
+    if (!$username || !$rawPassword) {
         http_response_code(400);
-        echo json_encode(['error' => 'Username required']);
+        echo json_encode(['error' => 'Username and password required']);
         exit;
     }
 
-    $stmt = $conn->prepare("SELECT id, username FROM users WHERE username = ?");
+    $hashedPassword = hash('sha256', $rawPassword);
+
+    $stmt = $conn->prepare("SELECT id, username, password FROM users WHERE username = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     $result = $stmt->get_result();
     
     if ($result->num_rows > 0) {
-        echo json_encode($result->fetch_assoc());
+        $row = $result->fetch_assoc();
+        if (!empty($row['password']) && $row['password'] !== $hashedPassword) {
+            http_response_code(401);
+            echo json_encode(['error' => 'Incorrect password']);
+            exit;
+        } elseif (empty($row['password'])) {
+            $updateStmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
+            $updateStmt->bind_param("si", $hashedPassword, $row['id']);
+            $updateStmt->execute();
+        }
+        echo json_encode(['id' => $row['id'], 'username' => $row['username']]);
     } else {
-        $stmt = $conn->prepare("INSERT INTO users (username) VALUES (?)");
-        $stmt->bind_param("s", $username);
+        $stmt = $conn->prepare("INSERT INTO users (username, password) VALUES (?, ?)");
+        $stmt->bind_param("ss", $username, $hashedPassword);
         $stmt->execute();
         echo json_encode(['id' => $conn->insert_id, 'username' => $username]);
     }
@@ -86,6 +98,19 @@ if ($method === 'POST' && preg_match('#^/login$#', $path)) {
 
 } elseif ($method === 'PUT' && preg_match('#^/events/(\d+)$#', $path, $matches)) {
     $id = $matches[1];
+    $reqUserId = $_SERVER['HTTP_USER_ID'] ?? '';
+
+    $stmt = $conn->prepare("SELECT user_id FROM events WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $res = $stmt->get_result()->fetch_assoc();
+    
+    if (!$res || $res['user_id'] != $reqUserId) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Unauthorized']);
+        exit;
+    }
+
     $name = $input['name'];
     $data = json_encode($input['data']);
 
@@ -101,6 +126,19 @@ if ($method === 'POST' && preg_match('#^/login$#', $path)) {
 
 } elseif ($method === 'DELETE' && preg_match('#^/events/(\d+)$#', $path, $matches)) {
     $id = $matches[1];
+    $reqUserId = $_SERVER['HTTP_USER_ID'] ?? '';
+
+    $stmt = $conn->prepare("SELECT user_id FROM events WHERE id = ?");
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $res = $stmt->get_result()->fetch_assoc();
+    
+    if (!$res || $res['user_id'] != $reqUserId) {
+        http_response_code(403);
+        echo json_encode(['error' => 'Unauthorized']);
+        exit;
+    }
+
     $stmt = $conn->prepare("DELETE FROM events WHERE id = ?");
     $stmt->bind_param("i", $id);
     
