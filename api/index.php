@@ -1,5 +1,5 @@
 <?php
-$conn = require_once 'db.php';
+$conn = require_once __DIR__ . '/db.php';
 
 header("Content-Type: application/json");
 
@@ -197,4 +197,3 @@ if ($method === 'POST' && preg_match('#^/login$#', $path)) {
 }
 
 $conn->close();
-?>

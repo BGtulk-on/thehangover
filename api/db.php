@@ -76,4 +76,3 @@ $eventTable = "CREATE TABLE IF NOT EXISTS events (
 @$conn->query($eventTable);
 
 return $conn;
-?>
