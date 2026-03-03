@@ -131,6 +131,7 @@ function App() {
       headers: { 'Authorization': `Bearer ${user.token}` }
     })
       .then(() => fetchEvents(user))
+      .catch(err => console.error("Failed to delete event", err))
   }
 
   const handleSaveEvent = (data) => {
@@ -143,6 +144,7 @@ function App() {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
       body: JSON.stringify({ name: data.name, data })
     })
+      .catch(err => console.error("Failed to save event", err))
   }
 
   const handleSelectEvent = (ev) => {

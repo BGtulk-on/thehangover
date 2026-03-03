@@ -121,25 +121,31 @@ app.get('/events', verifyJwt, (req, res) => {
 
     db.all("SELECT id, name, data FROM events WHERE user_id = ?", [userId], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
-        const events = rows.map(r => ({
-            id: r.id,
-            name: r.name,
-            data: JSON.parse(r.data)
-        }));
+        const events = rows.map(r => {
+            let parsedData = {};
+            try { parsedData = JSON.parse(r.data); } catch (e) { }
+            return {
+                id: r.id,
+                name: r.name,
+                data: parsedData
+            };
+        });
         res.json(events);
     });
 });
 
 app.get('/event/:id', (req, res) => {
-    // Left public deliberately for sharing, but could be locked down by share_token in the future.
     db.get("SELECT id, name, data FROM events WHERE id = ?", [req.params.id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row) return res.status(404).json({ error: 'Event not found' });
 
+        let parsedData = {};
+        try { parsedData = JSON.parse(row.data); } catch (e) { }
+
         res.json({
             id: row.id,
             name: row.name,
-            data: JSON.parse(row.data)
+            data: parsedData
         });
     });
 });
