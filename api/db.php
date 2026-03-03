@@ -51,10 +51,15 @@ if (!$host || !$user) {
     die(json_encode(["error" => "Database configuration missing in .env"]));
 }
 
-$conn = new mysqli($host, $user, $pass, $dbname);
-
-if ($conn->connect_error) {
-    die(json_encode(["error" => "Connection failed: " . $conn->connect_error]));
+try {
+    mysqli_report(MYSQLI_REPORT_OFF);
+    $conn = new mysqli($host, $user, $pass, $dbname);
+    
+    if ($conn->connect_error) {
+        die(json_encode(["error" => "DB Connection failed: " . $conn->connect_error]));
+    }
+} catch (Exception $e) {
+    die(json_encode(["error" => "DB Exception: " . $e->getMessage()]));
 }
 
 $userTable = "CREATE TABLE IF NOT EXISTS users (
