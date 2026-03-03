@@ -4,9 +4,10 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const path = require('path');
-const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
-const hashPwd = (pwd) => crypto.createHash('sha256').update(pwd).digest('hex');
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_secret_key_change_me';
 
 const app = express();
 app.use(cors());
@@ -47,34 +48,76 @@ const initDb = () => {
 
 initDb();
 
+const verifyJwt = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Unauthorized: No token provided' });
+    }
+    const token = authHeader.split(' ')[1];
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+        }
+        req.user = decoded;
+        next();
+    });
+};
+
 app.post('/login', (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ error: 'Username and password required' });
 
-    const hashedPwd = hashPwd(password);
-
-    db.get("SELECT id, username, password FROM users WHERE username = ?", [username], (err, row) => {
+    db.get("SELECT id, username, password FROM users WHERE username = ?", [username], async (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
 
         if (row) {
-            if (row.password && row.password !== hashedPwd) {
-                return res.status(401).json({ error: 'Incorrect password' });
+            if (row.password) {
+                // If it looks like a 64-char hex string from old sha256 hash, we should check it
+                const isLegacyHash = /^[a-fA-F0-9]{64}$/.test(row.password);
+
+                let matches = false;
+                if (isLegacyHash) {
+                    const crypto = require('crypto');
+                    const hashedPwd = crypto.createHash('sha256').update(password).digest('hex');
+                    matches = (hashedPwd === row.password);
+                    if (matches) {
+                        // upgrade to bcrypt
+                        const targetHash = await bcrypt.hash(password, 10);
+                        db.run("UPDATE users SET password = ? WHERE id = ?", [targetHash, row.id]);
+                    }
+                } else {
+                    matches = await bcrypt.compare(password, row.password);
+                }
+
+                if (!matches) {
+                    return res.status(401).json({ error: 'Incorrect password' });
+                }
             } else if (!row.password) {
-                db.run("UPDATE users SET password = ? WHERE id = ?", [hashedPwd, row.id]);
+                const targetHash = await bcrypt.hash(password, 10);
+                db.run("UPDATE users SET password = ? WHERE id = ?", [targetHash, row.id]);
             }
-            res.json({ id: row.id, username: row.username });
+            const token = jwt.sign({ id: row.id, username: row.username }, JWT_SECRET, { expiresIn: '7d' });
+            res.json({ id: row.id, username: row.username, token });
         } else {
-            db.run("INSERT INTO users (username, password) VALUES (?, ?)", [username, hashedPwd], function (err) {
+            const numSaltRounds = 10;
+            const targetHash = await bcrypt.hash(password, numSaltRounds);
+            db.run("INSERT INTO users (username, password) VALUES (?, ?)", [username, targetHash], function (err) {
                 if (err) return res.status(500).json({ error: err.message });
-                res.json({ id: this.lastID, username });
+                const token = jwt.sign({ id: this.lastID, username }, JWT_SECRET, { expiresIn: '7d' });
+                res.json({ id: this.lastID, username, token });
             });
         }
     });
 });
 
-app.get('/events', (req, res) => {
+app.get('/events', verifyJwt, (req, res) => {
     const userId = req.query.userId;
     if (!userId) return res.status(400).json({ error: 'User ID required' });
+
+    // Validate that the request is for the logged-in user
+    if (parseInt(userId, 10) !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
 
     db.all("SELECT id, name, data FROM events WHERE user_id = ?", [userId], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -88,6 +131,7 @@ app.get('/events', (req, res) => {
 });
 
 app.get('/event/:id', (req, res) => {
+    // Left public deliberately for sharing, but could be locked down by share_token in the future.
     db.get("SELECT id, name, data FROM events WHERE id = ?", [req.params.id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row) return res.status(404).json({ error: 'Event not found' });
@@ -100,20 +144,25 @@ app.get('/event/:id', (req, res) => {
     });
 });
 
-app.post('/events', (req, res) => {
+app.post('/events', verifyJwt, (req, res) => {
     const { userId, name, data } = req.body;
+    if (parseInt(userId, 10) !== req.user.id) {
+        return res.status(403).json({ error: 'Forbidden' });
+    }
+
     db.run("INSERT INTO events (user_id, name, data) VALUES (?, ?, ?)", [userId, name, JSON.stringify(data)], function (err) {
         if (err) return res.status(500).json({ error: err.message });
         res.json({ id: this.lastID });
     });
 });
 
-app.put('/events/:id', (req, res) => {
+app.put('/events/:id', verifyJwt, (req, res) => {
     const { name, data } = req.body;
-    const reqUserId = req.get('user-id');
+    const reqUserId = req.user.id;
+
     db.get("SELECT user_id FROM events WHERE id = ?", [req.params.id], (err, row) => {
         if (err || !row) return res.status(404).json({ error: 'Event not found' });
-        if (row.user_id != reqUserId) return res.status(403).json({ error: 'Unauthorized' });
+        if (row.user_id !== reqUserId) return res.status(403).json({ error: 'Forbidden: You do not own this event' });
 
         db.run("UPDATE events SET name = ?, data = ? WHERE id = ?", [name, JSON.stringify(data), req.params.id], function (err) {
             if (err) return res.status(500).json({ error: err.message });
@@ -122,11 +171,11 @@ app.put('/events/:id', (req, res) => {
     });
 });
 
-app.delete('/events/:id', (req, res) => {
-    const reqUserId = req.get('user-id');
+app.delete('/events/:id', verifyJwt, (req, res) => {
+    const reqUserId = req.user.id;
     db.get("SELECT user_id FROM events WHERE id = ?", [req.params.id], (err, row) => {
         if (err || !row) return res.status(404).json({ error: 'Event not found' });
-        if (row.user_id != reqUserId) return res.status(403).json({ error: 'Unauthorized' });
+        if (row.user_id !== reqUserId) return res.status(403).json({ error: 'Forbidden: You do not own this event' });
 
         db.run("DELETE FROM events WHERE id = ?", [req.params.id], function (err) {
             if (err) return res.status(500).json({ error: err.message });

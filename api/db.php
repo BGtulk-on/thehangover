@@ -7,8 +7,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-@ini_set('display_errors', 0);
-@ini_set('display_startup_errors', 0);
+ini_set('display_errors', 0);
+ini_set('display_startup_errors', 0);
 error_reporting(0);
 
 function loadEnv($path) {
@@ -68,8 +68,10 @@ $userTable = "CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255)
 )";
 
-@$conn->query($userTable);
-@$conn->query("ALTER TABLE users ADD COLUMN password VARCHAR(255)");
+if (!$conn->query($userTable)) {
+    error_log("Failed to create users table: " . $conn->error);
+}
+$conn->query("ALTER TABLE users ADD COLUMN password VARCHAR(255)");
 
 $eventTable = "CREATE TABLE IF NOT EXISTS events (
     id INT AUTO_INCREMENT PRIMARY KEY, 
@@ -78,6 +80,8 @@ $eventTable = "CREATE TABLE IF NOT EXISTS events (
     data LONGTEXT
 )";
 
-@$conn->query($eventTable);
+if (!$conn->query($eventTable)) {
+    error_log("Failed to create events table: " . $conn->error);
+}
 
 return $conn;

@@ -37,13 +37,21 @@ function App() {
     if (savedUser) {
       const u = JSON.parse(savedUser)
       setUser(u)
-      fetchEvents(u.id)
+      fetchEvents(u)
     }
   }, [])
 
-  const fetchEvents = (userId) => {
-    fetch(`${API_URL}/events?userId=${userId}`)
-      .then(res => res.json())
+  const fetchEvents = (userObj) => {
+    fetch(`${API_URL}/events?userId=${userObj.id}`, {
+      headers: { 'Authorization': `Bearer ${userObj.token}` }
+    })
+      .then(res => {
+        if (res.status === 401 || res.status === 403) {
+          handleLogout()
+          throw new Error('Unauthorized')
+        }
+        return res.json()
+      })
       .then(data => {
         if (Array.isArray(data)) {
           setEvents(data)
@@ -72,7 +80,7 @@ function App() {
       .then(u => {
         setUser(u)
         localStorage.setItem('hangover_user', JSON.stringify(u))
-        fetchEvents(u.id)
+        fetchEvents(u)
       })
       .catch(err => {
         if (setErrorMsg) setErrorMsg(err.message)
@@ -107,12 +115,12 @@ function App() {
 
     fetch(`${API_URL}/events`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
       body: JSON.stringify(newEvent)
     })
       .then(res => res.json())
       .then(({ id }) => {
-        fetchEvents(user.id)
+        fetchEvents(user)
       })
   }
 
@@ -120,9 +128,9 @@ function App() {
     if (!user) return
     fetch(`${API_URL}/events/${id}`, {
       method: 'DELETE',
-      headers: { 'user-id': user.id.toString() }
+      headers: { 'Authorization': `Bearer ${user.token}` }
     })
-      .then(() => fetchEvents(user.id))
+      .then(() => fetchEvents(user))
   }
 
   const handleSaveEvent = (data) => {
@@ -132,7 +140,7 @@ function App() {
 
     fetch(`${API_URL}/events/${currentEvent.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json', 'user-id': user.id.toString() },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
       body: JSON.stringify({ name: data.name, data })
     })
   }
@@ -167,7 +175,7 @@ function App() {
         initialData={currentEvent.data}
         onSave={handleSaveEvent}
         onBack={() => {
-          fetchEvents(user.id)
+          fetchEvents(user)
           setView('list')
         }}
       />
