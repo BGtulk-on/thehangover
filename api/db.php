@@ -7,9 +7,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
-@ini_set('display_errors', 1);
-@ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
+@ini_set('display_errors', 0);
+@ini_set('display_startup_errors', 0);
+error_reporting(0);
 
 function loadEnv($path) {
     if (!file_exists($path)) {
@@ -63,7 +63,7 @@ $userTable = "CREATE TABLE IF NOT EXISTS users (
     password VARCHAR(255)
 )";
 
-$conn->query($userTable);
+@$conn->query($userTable);
 @$conn->query("ALTER TABLE users ADD COLUMN password VARCHAR(255)");
 
 $eventTable = "CREATE TABLE IF NOT EXISTS events (
@@ -73,7 +73,7 @@ $eventTable = "CREATE TABLE IF NOT EXISTS events (
     data LONGTEXT
 )";
 
-$conn->query($eventTable);
+@$conn->query($eventTable);
 
 return $conn;
 ?>
