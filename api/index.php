@@ -12,14 +12,15 @@ $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true);
 
 if ($method === 'POST' && preg_match('#^/login$#', $path)) {
-    $rawPassword = $input['password'] ?? '';
-    if (!$username || !$rawPassword) {
+    $username = $input['username'] ?? '';
+    $raw_pass = $input['password'] ?? '';
+    if (!$username || !$raw_pass) {
         http_response_code(400);
         echo json_encode(['error' => 'Username and password required']);
         exit;
     }
 
-    $hashedPassword = hash('sha256', $rawPassword);
+    $hashed_pass = hash('sha256', $raw_pass);
 
     $stmt = $conn->prepare("SELECT id, username, password FROM users WHERE username = ?");
     $stmt->bind_param("s", $username);
@@ -28,19 +29,19 @@ if ($method === 'POST' && preg_match('#^/login$#', $path)) {
     
     if ($result->num_rows > 0) {
         $row = $result->fetch_assoc();
-        if (!empty($row['password']) && $row['password'] !== $hashedPassword) {
+        if (!empty($row['password']) && $row['password'] !== $hashed_pass) {
             http_response_code(401);
             echo json_encode(['error' => 'Incorrect password']);
             exit;
         } elseif (empty($row['password'])) {
             $updateStmt = $conn->prepare("UPDATE users SET password = ? WHERE id = ?");
-            $updateStmt->bind_param("si", $hashedPassword, $row['id']);
+            $updateStmt->bind_param("si", $hashed_pass, $row['id']);
             $updateStmt->execute();
         }
         echo json_encode(['id' => $row['id'], 'username' => $row['username']]);
     } else {
         $stmt = $conn->prepare("INSERT INTO users (username, password) VALUES (?, ?)");
-        $stmt->bind_param("ss", $username, $hashedPassword);
+        $stmt->bind_param("ss", $username, $hashed_pass);
         $stmt->execute();
         echo json_encode(['id' => $conn->insert_id, 'username' => $username]);
     }
