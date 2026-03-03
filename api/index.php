@@ -11,6 +11,37 @@ $path = strtok($path, '?');
 $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true);
 
+function fetch_rows($stmt) {
+    if (method_exists($stmt, 'get_result')) {
+        $result = $stmt->get_result();
+        if ($result) {
+            $rows = [];
+            while ($r = $result->fetch_assoc()) $rows[] = $r;
+            return $rows;
+        }
+    }
+    
+    // Fallback for non-mysqlnd
+    $stmt->store_result();
+    $metadata = $stmt->result_metadata();
+    if (!$metadata) return [];
+    
+    $params = [];
+    $row = [];
+    while ($field = $metadata->fetch_field()) {
+        $params[] = &$row[$field->name];
+    }
+    call_user_func_array([$stmt, 'bind_result'], $params);
+    
+    $results = [];
+    while ($stmt->fetch()) {
+        $copy = [];
+        foreach ($row as $key => $val) $copy[$key] = $val;
+        $results[] = $copy;
+    }
+    return $results;
+}
+
 if ($method === 'POST' && preg_match('#^/login$#', $path)) {
     $username = $input['username'] ?? '';
     $raw_pass = $input['password'] ?? '';
@@ -23,12 +54,17 @@ if ($method === 'POST' && preg_match('#^/login$#', $path)) {
     $hashed_pass = hash('sha256', $raw_pass);
 
     $stmt = $conn->prepare("SELECT id, username, password FROM users WHERE username = ?");
+    if (!$stmt) {
+        http_response_code(500);
+        echo json_encode(['error' => 'Prepare failed: ' . $conn->error]);
+        exit;
+    }
     $stmt->bind_param("s", $username);
     $stmt->execute();
-    $result = $stmt->get_result();
+    $rows = fetch_rows($stmt);
+    $row = !empty($rows) ? $rows[0] : null;
     
-    if ($result->num_rows > 0) {
-        $row = $result->fetch_assoc();
+    if ($row) {
         if (!empty($row['password']) && $row['password'] !== $hashed_pass) {
             http_response_code(401);
             echo json_encode(['error' => 'Incorrect password']);
@@ -42,8 +78,12 @@ if ($method === 'POST' && preg_match('#^/login$#', $path)) {
     } else {
         $stmt = $conn->prepare("INSERT INTO users (username, password) VALUES (?, ?)");
         $stmt->bind_param("ss", $username, $hashed_pass);
-        $stmt->execute();
-        echo json_encode(['id' => $conn->insert_id, 'username' => $username]);
+        if ($stmt->execute()) {
+            echo json_encode(['id' => $conn->insert_id, 'username' => $username]);
+        } else {
+            http_response_code(500);
+            echo json_encode(['error' => 'Creation failed: ' . $conn->error]);
+        }
     }
 
 } elseif ($method === 'GET' && preg_match('#^/events$#', $path)) {
@@ -57,10 +97,10 @@ if ($method === 'POST' && preg_match('#^/login$#', $path)) {
     $stmt = $conn->prepare("SELECT id, name, data FROM events WHERE user_id = ?");
     $stmt->bind_param("i", $userId);
     $stmt->execute();
-    $result = $stmt->get_result();
     
+    $rows = fetch_rows($stmt);
     $events = [];
-    while ($row = $result->fetch_assoc()) {
+    foreach ($rows as $row) {
         $row['data'] = json_decode($row['data']);
         $events[] = $row;
     }
@@ -71,13 +111,12 @@ if ($method === 'POST' && preg_match('#^/login$#', $path)) {
     $stmt = $conn->prepare("SELECT id, name, data FROM events WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
-    $result = $stmt->get_result();
-
-    if ($result->num_rows === 0) {
+    $rows = fetch_rows($stmt);
+    if (empty($rows)) {
         http_response_code(404);
         echo json_encode(['error' => 'Event not found']);
     } else {
-        $row = $result->fetch_assoc();
+        $row = $rows[0];
         $row['data'] = json_decode($row['data']);
         echo json_encode($row);
     }
@@ -104,7 +143,8 @@ if ($method === 'POST' && preg_match('#^/login$#', $path)) {
     $stmt = $conn->prepare("SELECT user_id FROM events WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
-    $res = $stmt->get_result()->fetch_assoc();
+    $rows = fetch_rows($stmt);
+    $res = !empty($rows) ? $rows[0] : null;
     
     if (!$res || $res['user_id'] != $reqUserId) {
         http_response_code(403);
@@ -132,7 +172,8 @@ if ($method === 'POST' && preg_match('#^/login$#', $path)) {
     $stmt = $conn->prepare("SELECT user_id FROM events WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
-    $res = $stmt->get_result()->fetch_assoc();
+    $rows = fetch_rows($stmt);
+    $res = !empty($rows) ? $rows[0] : null;
     
     if (!$res || $res['user_id'] != $reqUserId) {
         http_response_code(403);
